@@ -1,5 +1,4 @@
 require 'capistrano/rails/assets'
-require 'pry'
 namespace :load do
   task :defaults do
     set :precompile_env,   fetch(:rails_env) || 'production'
@@ -40,7 +39,6 @@ namespace :deploy do
 
     desc "Performs rsync to app servers"
     task :precompile do
-
       on roles(fetch(:assets_roles)) do
         run_locally do 
           execute "#{fetch(:rsync_cmd)} ./#{fetch(:assets_dir)}/ #{fetch(:user)}@#{fetch(:ipaddress)}:#{release_path}/#{fetch(:assets_dir)}/"
