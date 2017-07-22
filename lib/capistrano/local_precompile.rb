@@ -1,5 +1,5 @@
 require 'capistrano/rails/assets'
-
+require 'pry'
 namespace :load do
   task :defaults do
     set :precompile_env,   fetch(:rails_env) || 'production'
@@ -7,7 +7,7 @@ namespace :load do
     set :rsync_cmd,        "rsync -av --delete"
 
     after "bundler:install", "deploy:assets:prepare"
-    #before "deploy:assets:symlink", "deploy:assets:remove_manifest"
+    after "deploy:assets:prepare", "deploy:assets:precompile"
     after "deploy:assets:prepare", "deploy:assets:cleanup"
   end
 end
@@ -15,15 +15,9 @@ end
 namespace :deploy do
   # Clear existing task so we can replace it rather than "add" to it.
   Rake::Task["deploy:compile_assets"].clear
+  Rake::Task["deploy:assets:precompile"].clear
 
   namespace :assets do
-
-    # desc "Remove manifest file from remote server"
-    # task :remove_manifest do
-    #   with rails_env: fetch(:assets_dir) do
-    #     execute "rm -f #{shared_path}/#{shared_assets_prefix}/manifest*"
-    #   end
-    # end
 
     desc "Remove all local precompiled assets"
     task :cleanup do
@@ -46,13 +40,11 @@ namespace :deploy do
 
     desc "Performs rsync to app servers"
     task :precompile do
-      on roles(fetch(:assets_role)) do
 
-        local_manifest_path = run_locally "ls #{assets_dir}/manifest*"
-        local_manifest_path.strip!
-
-        run_locally "#{fetch(:rsync_cmd)} ./#{fetch(:assets_dir)}/ #{user}@#{server}:#{release_path}/#{fetch(:assets_dir)}/"
-        run_locally "#{fetch(:rsync_cmd)} ./#{local_manifest_path} #{user}@#{server}:#{release_path}/assets_manifest#{File.extname(local_manifest_path)}"
+      on roles(fetch(:assets_roles)) do
+        run_locally do 
+          execute "#{fetch(:rsync_cmd)} ./#{fetch(:assets_dir)}/ #{fetch(:user)}@#{fetch(:ipaddress)}:#{release_path}/#{fetch(:assets_dir)}/"
+        end
       end
     end
   end
